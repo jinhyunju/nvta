@@ -10,7 +10,7 @@
 
 ## Processing multiple transcripts and queries from files
 
-```
+```python
 from nvta.transcript_utils import TranscriptMapper
 
 fileTranscriptInput = "./tests/resources/example_transcript_input.tsv"
@@ -32,7 +32,7 @@ transcriptMapper.export_query_results(outputFile= outputFile)
 
 ## Use single transcript with direct user input
 
-```
+```python
 from nvta.transcript_utils import Transcript
 
 singleTranscript = Transcript(name="TR1",
