@@ -107,7 +107,7 @@ class Transcript():
         tEnd = 0
         conversionTree = IntervalTree()
 
-        matches = re.findall(r'([0-9]+)([MIDNSHPX=]{1})', cigar)
+        matches = re.findall(r'([0-9]+)([MIDNX=]{1})', cigar)
         
         for cigarEntry in matches:
             logger.debug("Processing CIGAR entry {}".format(cigarEntry))
@@ -132,9 +132,6 @@ class Transcript():
                     refTransform = refTransform - 1
                     conversionTree[tStart:tEnd] = float(str(refTransform)+"."+str(i + 1))
                     tStart = tEnd
-
-            elif opChar in ['H','S','P']:
-                continue
 
             else:
                 # catch unknown
