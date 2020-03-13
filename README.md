@@ -1,6 +1,6 @@
-# `nvta` package with `transcript_utils`
+# Transcript Mapping Utilities 
 
-A python library for mapping transcript coordinates to the reference genome based on its CIGAR string.
+`nvta` is a python library for mapping transcript coordinates to the reference genome based on its CIGAR string.
 
 # Installation
 
