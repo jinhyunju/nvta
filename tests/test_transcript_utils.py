@@ -3,6 +3,9 @@ import pytest
 from intervaltree import IntervalTree, Interval
 from nvta.transcript_utils import Transcript, TranscriptMapper
 
+"""
+Resources for testing
+"""
 resourceDir = "./tests/resources"
 
 exampleTranscriptFile = os.path.join(resourceDir, 
@@ -11,6 +14,10 @@ exampleTranscriptFile = os.path.join(resourceDir,
 exampleQueryFile = os.path.join(resourceDir, 
                                 "example_query.tsv")
 
+
+"""
+Template for creating a mock transcript
+"""
 def create_mock_transcript(name = "TR1", 
                            chrom = "CHR1", 
                            startPos = 3, 
@@ -22,6 +29,9 @@ def create_mock_transcript(name = "TR1",
                                 cigar = cigar)
     return testTranscript
 
+"""
+Testing starts here
+"""
 
 def test_verify_cigar():
 
@@ -32,11 +42,11 @@ def test_verify_cigar():
 
     # test case for invalid character in cigar
     invalidCharCigar = "8M7D6M2I2M11D7M9O"
-    with pytest.raises(ValueError, match="Invalid CIGAR string character"):
+    with pytest.raises(ValueError):
         Transcript.verify_cigar(invalidCharCigar)
 
     malformatedCigar = "8MD7I"
-    with pytest.raises(ValueError, match="Malformatted CIGAR string"):
+    with pytest.raises(ValueError):
         Transcript.verify_cigar(malformatedCigar)
 
 
@@ -65,10 +75,10 @@ def test_translate_coordinates():
     expected_16 = {'name': 'TR1', 'inputPos': 16, 'chrom': 'CHR1', 'refPos': 24}
     assert testTranscript.translate_coordinates(16) == expected_16
 
-    with pytest.raises(ValueError, match="Negative position given."):
+    with pytest.raises(ValueError):
         testTranscript.translate_coordinates(-1)
 
-    with pytest.raises(ValueError, match="Position exceeding transript length."):
+    with pytest.raises(ValueError):
         testTranscript.translate_coordinates(25)
 
 def test_import_transcripts():
@@ -116,3 +126,35 @@ def test_run_single_query():
     singleQueryResult = testMapper.run_single_query("TR1", 24)
 
     expectedResult = {'name': 'TR1', 'inputPos': 24, 'chrom': 'CHR1', 'refPos': 42}
+
+def test_check_transcript_line():
+
+    validLine = "TR1\tCHR1\t3\t8M7D6M2I2M11D7M\n"
+    result1 = TranscriptMapper.check_transcript_line(validLine)
+    expected1 = ["TR1", "CHR1", "3", "8M7D6M2I2M11D7M"]
+
+    assert result1 == expected1
+
+    invalidLine1 = "TR1\tCHR1\t3\t8M7D6M2I2M11D7M\t1\n"
+    with pytest.raises(Exception):
+        TranscriptMapper.check_transcript_line(invalidLine1)
+
+    invalidLine2 = "TR1\tCHR1\tB\t8M7D6M2I2M11D7M\n"
+    with pytest.raises(Exception):
+        TranscriptMapper.check_transcript_line(invalidLine2)
+
+def test_check_query_line():
+
+    validLine = "TR1\t10\n"
+    result1 = TranscriptMapper.check_query_line(validLine)
+    expected1 = ["TR1", "10"]
+
+    assert result1 == expected1
+
+    invalidLine1 = "TR1\t10\t8X\n"
+    with pytest.raises(Exception):
+        TranscriptMapper.check_query_line(invalidLine1)
+
+    invalidLine2 = "TR1\tU\n"
+    with pytest.raises(Exception):
+        TranscriptMapper.check_query_line(invalidLine2)

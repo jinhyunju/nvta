@@ -1,5 +1,4 @@
 import re
-import numpy as np
 import logging
 from intervaltree import IntervalTree
 
@@ -16,7 +15,7 @@ class Transcript():
     
     """
     
-    def __init__(self, name, chrom, startPos, cigar):
+    def __init__(self, name, chrom, startPos, cigar, isReverse = False):
         """
         Initiate transcript object with following inputs
         
@@ -24,12 +23,13 @@ class Transcript():
         :param chrom: string for transcript chromosome (ex. chr1, chr2)
         :param startPos: int specifying start position of transcript on reference
         :param cigar: string containing the CIGAR string of the transcript 
-        :returns: none
+        :return: none
         :rtype: none
         """
         self.name = name
         self.chrom = chrom
         self.startPos = startPos
+        self.isReverse = isReverse
         # validate cigar
         self.cigar = self.verify_cigar(cigar)
         # create interval tree based on cigar
@@ -41,7 +41,7 @@ class Transcript():
         """
         Accessor method to get the transcript information
 
-        :returns: A dictionary with the transcript 
+        :return: A dictionary with the transcript 
                   name, chromosome, start position, and CIGAR string
         :rtype: dict
         """
@@ -57,7 +57,7 @@ class Transcript():
         Method to verify a given CIGAR string
 
         :param cigar: string containing the CIGAR string of the transcript 
-        :returns: Input cigar string if it passed all checks
+        :return: Input cigar string if it passed all checks
         :rtype: string
         """
 
@@ -93,7 +93,7 @@ class Transcript():
         """
         Process a CIGAR string and create IntervalTree for coordinate translation
         
-        :returns: IntervalTree containing intervals of the transcript coordinates 
+        :return: IntervalTree containing intervals of the transcript coordinates 
                   that can be translated to the reference coordinates by adding 
                   the value saved for the interval
         :rtype: IntervalTree
@@ -102,11 +102,11 @@ class Transcript():
 
         refTransform = self.startPos
         cigar = self.cigar
+        isReverse = self.isReverse
         
         tStart = 0
         tEnd = 0
         conversionTree = IntervalTree()
-
         matches = re.findall(r'([0-9]+)([MIDNX=]{1})', cigar)
         
         for cigarEntry in matches:
@@ -116,38 +116,46 @@ class Transcript():
             opChar = cigarEntry[1]
 
             if opChar in ['M','=','X']:
-                # constant adjustment
+                # constant adjustment for matching bases
                 tEnd = tStart + opInt
                 conversionTree[tStart:tEnd] = refTransform
 
             elif opChar in ['N','D']:
-                # increase adjustment by gap size 
-                refTransform = refTransform + opInt
+                # increase adjustment to account for gaps
+                if isReverse:
+                    refTransform = refTransform - opInt
+                else:
+                    refTransform = refTransform + opInt
 
             elif opChar in ['I']:
-                # handle insertion to reference
+                # special logic to handle insertion to reference
                 for i in range(0,opInt):
                     
                     tEnd = tStart + 1
-                    refTransform = refTransform - 1
+                    if isReverse:
+                        refTransform = refTransform + 1
+                    else:
+                        refTransform = refTransform - 1
                     conversionTree[tStart:tEnd] = float(str(refTransform)+"."+str(i + 1))
                     tStart = tEnd
 
             else:
-                # catch unknown
+                # catch unknown if it wasn't caught in CIGAR validation
                 logger.error("Encountered invalid character in CIGAR {}".format(opChar))
 
+            # advance to next transcript interval
             tStart = tEnd
+
         logger.info("Finished Processing of Transcript CIGAR")
+
         return conversionTree
-
-
+    
     def translate_coordinates(self, inputPosition):
         """
         Translate a transcript position to the reference position
         
         :param inputPosition: int specifying the transcript coordinate to be translated
-        :returns: dictionary containing the transcript name (name)
+        :return: dictionary containing the transcript name (name)
                   input position (inputPos), chromosome (chrom), and translated ref position (refPos)
         :rtype: dict
         """
@@ -170,8 +178,17 @@ class Transcript():
 
         else:
             posAdjustment = intervalSet.pop().data
+
+        if self.isReverse:
+            adjustedCoordinate = posAdjustment - inputPosition
+        else:
             adjustedCoordinate = inputPosition + posAdjustment
-            
+        
+        if float(adjustedCoordinate).is_integer():
+            refCoordinate = int(adjustedCoordinate)
+        else :
+            refCoordinate = format(adjustedCoordinate, '.1f')
+
         results = {'name' : self.name, 
                    'inputPos' : inputPosition, 
                    'chrom' : self.chrom, 
@@ -192,27 +209,46 @@ class TranscriptMapper():
     def __init__(self):
         self.transcripts = {}
         self.queryResults = []
-        self.queryInfo = []
+        self.queries = []
 
-    def get_queries(self):
+    def get_queries(self,index = None):
         """
         Accessor for query info
 
-        :returns: list of dictionaries containing imported queries
+        :return: list of dictionaries containing imported queries
         :rtype: list
         """
-        return self.queryInfo
+        if index is None:
+            return self.queries
+        else:
+            if index >= 0 & index < len(self.queries):
+                return self.queries[index]
+            else:
+                raise Exception("Query index out of bounds")
 
-    def get_transcripts(self):
+    def get_transcripts(self, name = None):
         """
         Accessor for transcripts
 
-        :returns: dictionary of imported transcripts
+        :return: dictionary of imported transcripts
         :rtype: dict
         """
-        return self.queryInfo
+        if name is None:
+            return self.transcripts
+        else:
+            if name in self.transcripts:
+                return self.transcripts[name]
+            else:
+                raise Exception("Transcript not found.")
 
     def _build_transcripts(self, inputFile):
+        """
+        Internal wrapper for retrieving transcript information.
+
+        :param inputFile: string containing path to inputFile.
+        :return: dict of Transcripts with transcript names as keys
+        :rtype: dict
+        """
         tmpTxDict = {}
         transcriptInfo = self.get_transcript_info_from_file(inputFile)
         for item in transcriptInfo :
@@ -220,18 +256,45 @@ class TranscriptMapper():
         return tmpTxDict
     
     def import_transcripts(self, inputFile):
+        """
+        Main method for importing transcripts from files.
+
+        :param inputFile: string containing path to input file.
+        :return: none
+        """
         self.transcripts = self._build_transcripts(inputFile)
     
     def import_queries(self, inputFile):
-        self.queryInfo = self.get_query_from_file(inputFile)
+        """
+        Main method for importing queris from files.
+
+        :param inputFile: string containing path to input file.
+        :return: none
+        """
+        self.queries = self.get_query_from_file(inputFile)
 
     def run_all_queries(self, showResults = False):
-        results = [self.run_single_query(**x) for x in self.queryInfo]
+        """
+        Method to run all queries imported to object.
+
+        :param showResults: bool if set to True return query results
+        :return: list of dictionaries containing query results
+        :rtype: list
+        """
+        results = [self.run_single_query(**x) for x in self.queries]
         self.queryResults = results
         if showResults:
-            return self.queryResults
+            return results
 
     def run_single_query(self, name, queryPos):
+        """
+        Method to run a single query
+
+        :param name: string specifying the transcript name
+        :param queryPos: int specifying the transcript position to translate.
+        :return: single query result
+        :rtype: dict
+        """
         try:
             result = self.transcripts[name].translate_coordinates(queryPos)
         except KeyError:
@@ -240,6 +303,13 @@ class TranscriptMapper():
         return result
     
     def export_query_results(self, outputFile):
+        """
+        Method to exort saved query results to file.
+
+        :param outputFile: string specifying the output file 
+                           (path to output file must exist)
+        :return: none
+        """
         # check if file exists
         with open(outputFile, 'w') as f:
             for item in self.queryResults:
@@ -247,13 +317,20 @@ class TranscriptMapper():
 
     @staticmethod
     def get_transcript_info_from_file(inputFile):
+        """
+        Static method to read transcript information from a file
+
+        :param inputFile: string containing path to input file.
+        :return: list of dictionaries containing transcript information
+        :rtype: list
+        """
         inputTranscripts = []
         logger.info("Reading Transcript Information from {}".format(inputFile))
         with open(inputFile, 'r') as f:
             for line in f:
                 # check if 4 tab separated entries are present
                 # and whether the 3rd entry can be converted to int
-                lineSplit = TranscriptMapper._check_transcript_line(line)
+                lineSplit = TranscriptMapper.check_transcript_line(line)
                 
                 transcriptInfo = {'name' : lineSplit[0], 
                                   'chrom' : lineSplit[1],
@@ -264,21 +341,35 @@ class TranscriptMapper():
     
     @staticmethod
     def get_query_from_file(inputFile):
+        """
+        Static method to read query information from a file
+
+        :param inputFile: string containing path to input file.
+        :return: list of dictionaries containing query information
+        :rtype: list
+        """
         inputQuery = []
         logger.info("Reading Query Information from {}".format(inputFile))
         with open(inputFile, 'r') as f:
             for line in f:
-                lineSplit = TranscriptMapper._check_query_line(line)
+                lineSplit = TranscriptMapper.check_query_line(line)
                 inputQuery.append({'name' : lineSplit[0], 
                                    'queryPos' : int(lineSplit[1])})
         return inputQuery
     
     @staticmethod
-    def _check_transcript_line(line):
+    def check_transcript_line(line):
+        """
+        Helper method to verify a line of a transcript input file
+
+        :param line: string containing a single line from a transcript file.
+        :return: list of elements in line separated by tab.
+        :rtype: list
+        """
         lineSplit = line.strip().split("\t")
         
         if len(lineSplit) != 4:
-            raise Exception("Input file must be tab separated and have 4 entries.")
+            raise Exception("Input file must have 4 tab separated entries.")
         
         try:
             int(lineSplit[2])
@@ -288,11 +379,18 @@ class TranscriptMapper():
         return lineSplit
 
     @staticmethod
-    def _check_query_line(line):
+    def check_query_line(line):
+        """
+        Helper method to verify a line of a query input file
+
+        :param line: string containing a single line from a query file.
+        :return: list of elements in line separated by tab.
+        :rtype: list
+        """
         lineSplit = line.strip().split("\t")
         
         if len(lineSplit) != 2:
-            raise Exception("Input file must be tab separated and have 2 entries.")
+            raise Exception("Input file must have 2 tab separated entries.")
         
         try:
             int(lineSplit[1])
