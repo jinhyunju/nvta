@@ -8,7 +8,7 @@
 
 # Installation
 
-Using an envrionment that has `python3`, execute the following command to install the package.
+Using an environment that has `python3`, execute the following command to install the package.
 
 `pip install -e /<path>/<to>/<package>`
 
@@ -43,7 +43,7 @@ transcriptMapper.import_transcripts(fileTranscriptInput)
 transcriptMapper.import_queries(fileQueryInput)
 ```
 
-3. Execute all queries and export reslts to output file.
+3. Execute all queries and export results to output file.
 
 ```python
 # execute all queries
@@ -67,7 +67,7 @@ singleTranscript.translate_coordinates(4)
 
 ```
 
-# Original Problem Statment
+# Original Problem Statement
 
 ### 5' to 3' mapping direction (`+`)
 The objective is to write software that translates transcript coordinates to genomic coordinates. For example, consider the simple transcript TR1, which aligns to the genome as follows:
@@ -106,7 +106,7 @@ Here we would map the start of the transcript to CHR1:43. The ninth base would m
 ### Inputs
 `Transcript input`: A five column (tab-separated) file containing the transcripts. 
 - The first column is the transcript name (`string`)
-- The second column shows the chromosome that the transcript maps to (`chr`)
+- The second column shows the chromosome that the transcript maps to (`string`)
 - The third column shows the 0-based starting position of the transcript (5' end) on the reference. (`int`)
 - The fourth column has the CIGAR string indicating the mapping of the transcript to the reference. (`string`)
 - The fifth column should have `+` for a 5'-3' direction and a `-` for a 3'-5' direction transcript. (`string`)
@@ -125,7 +125,7 @@ Here we would map the start of the transcript to CHR1:43. The ninth base would m
 
 ### Additional detail for handling insertions 
 
-To easily distinguish insertion bases, that do not have a direct mapping to the reference, from other bases, I have implemented a modified output for the insertion coordinates. The output coordinate will have the format of `<ref_base_before_insertion>.<number_of_inserted_base>`. For example, the first position of the insertion (14) in the problem statement would map to `23.1` since the reference position before the start of the insertion is 23 and it is the 1st base in the insertion. The 1-based coordinate for insertion was specifically chosen to avoid confusions such as `23` vs`23.0` if a 0-based insertion coordinate was chosen. 
+To easily distinguish insertion bases, which do not have a direct mapping to the reference, I have implemented a modified output for the insertion coordinates. The output coordinate will have the format of `<ref_base_before_insertion>.<number_of_inserted_base>`. For example, the first position of the insertion (14) in the problem statement would map to `23.1` since the reference position before the start of the insertion is 23 and it is the 1st base in the insertion. The 1-based coordinate for insertion was specifically chosen to avoid confusions such as `23` vs`23.0` if a 0-based insertion coordinate was chosen. 
 
 
 ## Key Assumptions
@@ -150,7 +150,7 @@ To easily distinguish insertion bases, that do not have a direct mapping to the 
 
 - Performance might be sub-optimal for cases where there are a lot of small stretches of different CIGAR operations.
 
-- When the goal is to support a lot of queries that are not neccessary unique, pre-computing the translation and saving it in a look-up table might yield better performance.
+- When the goal is to support a lot of queries that are not necessarily unique, pre-computing the translation and saving it in a look-up table might yield better performance.
 
 
 ## Testing
@@ -160,6 +160,6 @@ To easily distinguish insertion bases, that do not have a direct mapping to the 
 ## Additional Thoughts
 
 - To produce real-world data using external data sources, one might download cDNA or CDS sequences from public sources such as Ensembl (using their FTP download features) and map them to a reference in house to generate the CIGAR strings. This would allow the user to not be tied to a specific version of the reference. 
-- For dealing with very long CIGAR strings, one could split the transcript between long streches of deletions (likely introns) to reduce the amount of data that is associated to a single transcript. 
-- To handle many many CIGAR strings, the data could be partitioned into chromosomes and sub regions within the chromosome, so that each subset is at a reasonable size. 
+- For dealing with very long CIGAR strings, one could split the transcript between long stretches of deletions (likely introns) to reduce the amount of data that is associated to a single transcript. 
+- To handle a large number of CIGAR strings, the data could be partitioned into chromosomes and sub regions within the chromosome, so that each subset is at a reasonable size. 
 - If one expects a large number of queries that are not unique, pre-computing the translation of coordinates and having a look up table might be more efficient (as mentioned in the implementation details). Having values pre-computed for the most frequently queried genes/transcripts only and doing the translation on the fly for other less frequently queried genes/transcripts could be a happy medium as well.
