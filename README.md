@@ -119,6 +119,8 @@ Example :
 TR1	CHR1	3	8M7D6M2I2M11D7M	+
 ```
 
+---
+
 `Query input`: A two column (tab-separated) file indicating a set of queries. 
 - The first column shows the name of the transcript. (`string`)
 - The second column shows the 0-based transcript coordinate that should be translated to a reference position. (`int`)
@@ -128,6 +130,8 @@ Example:
 ```
 TR1	4
 ```
+
+---
 
 ### Outputs
 
@@ -142,6 +146,8 @@ Example:
 ```
 TR1	4	CHR1	7	+
 ```
+
+---
 
 ### Additional detail for handling insertions 
 
