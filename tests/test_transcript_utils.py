@@ -25,6 +25,10 @@ def create_mock_transcript(name="TR1",
                            startPos=3,
                            cigar="8M7D6M2I2M11D7M",
                            direction="+"):
+    """
+    Utility function to create mock transcripts
+    without the need to specify all inputs.
+    """
 
     testTranscript = Transcript(name=name,
                                 chrom=chrom,
@@ -85,8 +89,24 @@ def test_process_cigar():
 
 
 def test_translate_coordinates_pos_strand():
+    """
+    First Example
+    COORD       0    5    10   15   20     25   30   35   40   45   50
+    GENOME:CHR1 ACTGTCATGTACGTTTAGCTAGCC--TAGCTAGGGACCTAGATAATTTAGCTAG
+    TR1         5' GTCATGTA-------CTAGCCGGTA-----------AGATAAT 3'
+                   |    |           |    |               |   |
+                   0    5           10   15              20  24
+    CIGAR = 8M7D6M2I2M11D7M
+    """
 
-    testTranscript = create_mock_transcript(cigar="8M7D6M2I2M11D7M")
+    testTranscript = create_mock_transcript(cigar="8M7D6M2I2M11D7M",
+                                            direction="+")
+
+    with pytest.raises(ValueError):
+        testTranscript.translate_coordinates(-1)
+
+    with pytest.raises(ValueError):
+        testTranscript.translate_coordinates(25)
 
     expected_3 = {'name': 'TR1', 'inputPos': 3,
                   'chrom': 'CHR1', 'refPos': 6, 'direction': "+"}
@@ -108,15 +128,46 @@ def test_translate_coordinates_pos_strand():
 
     assert testTranscript.translate_coordinates(16) == expected_16
 
-    with pytest.raises(ValueError):
-        testTranscript.translate_coordinates(-1)
+    """
+    Second example
+    COORD       0    5      10   15   20     25   30   35   40   45   50
+    GENOME:CHR1 ACTGTCATGT--GTTTAGCTAGCC--TAGCTAGGGACCTAGATAATTTAGCTAG
+    TR1           5' CA---CAGTTT-------CTATAGCTAG-----------ATTTAGC 3'
+                     |       |           |    |               |   |
+                     0       5           10   15              20  24
+    CIGAR = 2M3D2I4M7D1M2I7M11D7M
+    """
 
-    with pytest.raises(ValueError):
-        testTranscript.translate_coordinates(25)
+    testTranscript2 = create_mock_transcript(startPos=5,
+                                             cigar="2M3D2I4M7D1M2I7M11D7M",
+                                             direction="+")
+
+    expected2_3 = {'name': 'TR1', 'inputPos': 2,
+                   'chrom': 'CHR1', 'refPos': 9.1, 'direction': "+"}
+
+    assert testTranscript2.translate_coordinates(2) == expected2_3
+
+    expected2_8 = {'name': 'TR1', 'inputPos': 8,
+                   'chrom': 'CHR1', 'refPos': 21, 'direction': "+"}
+
+    assert testTranscript2.translate_coordinates(8) == expected2_8
+
+    expected2_24 = {'name': 'TR1', 'inputPos': 24,
+                    'chrom': 'CHR1', 'refPos': 46, 'direction': "+"}
+
+    assert testTranscript2.translate_coordinates(24) == expected2_24
 
 
 def test_translate_coordinates_neg_strand():
-
+    """
+    First Example
+    COORD       0    5    10   15   20     25   30   35   40   45   50
+    GENOME:CHR1 ACTGTCATGTACGTTTAGCTAGCC--TAGCTAGGGACCTAGATGTATTAGCTAG
+    TR1         3' GTCATGTA-------CTAGCCGGTA-----------AGATGTA 5'
+                   |   |           |    |               |    |
+                   24  20          15   10              5    0
+    CIGAR = 8M7D6M2I2M11D7M
+    """
     testTranscript = create_mock_transcript(name="TR3",
                                             startPos=43,
                                             cigar="8M7D6M2I2M11D7M",
@@ -148,6 +199,35 @@ def test_translate_coordinates_neg_strand():
     with pytest.raises(ValueError):
         testTranscript.translate_coordinates(25)
 
+    """
+    Second example
+    COORD       0    5      10   15   20     25   30   35   40   45   50
+    GENOME:CHR1 ACTGTCATGT--GTTTAGCTAGCC--TAGCTAGGGACCTAGATAATTTAGCTAG
+    TR1           3' CA---CAGTTT-------CTATAGCTAG-----------ATTTAGC 5'
+                     |       |           |    |               |   |
+                     24      19          14   9               4   0
+    CIGAR = 2M3D2I4M7D1M2I7M11D7M
+    """
+
+    testTranscript2 = create_mock_transcript(startPos=46,
+                                             cigar="2M3D2I4M7D1M2I7M11D7M",
+                                             direction="-")
+
+    expected2_0 = {'name': 'TR1', 'inputPos': 0,
+                   'chrom': 'CHR1', 'refPos': 46, 'direction': "-"}
+
+    assert testTranscript2.translate_coordinates(0) == expected2_0
+
+    expected2_14 = {'name': 'TR1', 'inputPos': 14,
+                    'chrom': 'CHR1', 'refPos': 22.1, 'direction': "-"}
+
+    assert testTranscript2.translate_coordinates(14) == expected2_14
+
+    expected2_22 = {'name': 'TR1', 'inputPos': 22,
+                    'chrom': 'CHR1', 'refPos': 10.2, 'direction': "-"}
+
+    assert testTranscript2.translate_coordinates(22) == expected2_22
+
 
 def test_import_transcripts():
 
@@ -174,6 +254,9 @@ def test_import_transcripts():
     for i in range(0, len(result)):
         assert result[i] == expected[i]
 
+    with pytest.raises(FileNotFoundError):
+        testMapper.get_transcript_info_from_file("./non_existing_file.tsv")
+
 
 def test_import_query():
 
@@ -191,6 +274,9 @@ def test_import_query():
     for i in range(0, len(result)):
         assert result[i] == expected[i]
 
+    with pytest.raises(FileNotFoundError):
+        testMapper.get_query_from_file("./non_existing_file.tsv")
+
 
 def test_run_single_query():
     testMapper = TranscriptMapper()
@@ -199,7 +285,9 @@ def test_run_single_query():
     singleQueryResult = testMapper.run_single_query("TR1", 24)
 
     expectedResult = {'name': 'TR1', 'inputPos': 24,
-                      'chrom': 'CHR1', 'refPos': 42, 'direction': "+"}
+                      'chrom': 'CHR1', 'refPos': 43, 'direction': "+"}
+
+    assert singleQueryResult == expectedResult
 
 
 def test_check_transcript_line():

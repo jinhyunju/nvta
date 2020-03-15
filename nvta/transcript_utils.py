@@ -1,4 +1,5 @@
 import re
+import os
 import logging
 from intervaltree import IntervalTree
 
@@ -143,7 +144,7 @@ class Transcript():
                     # if 3'-5' reduce correction factor
                     refTransform = refTransform - opInt
                 else:
-                    # if 5'-3' reduce correction factor
+                    # if 5'-3' increase correction factor
                     refTransform = refTransform + opInt
 
             elif opChar in ['I']:
@@ -166,7 +167,7 @@ class Transcript():
                 # catch unknown if it wasn't caught in CIGAR validation
                 logger.error("""Encountered invalid character
                                 in CIGAR {}""".format(opChar))
-
+                raise ValueError("Unknown CIGAR operation {}".format(opChar))
             # advance to next transcript interval
             tStart = tEnd
 
@@ -223,6 +224,7 @@ class Transcript():
                    'chrom': self.chrom,
                    'refPos': refCoordinate,
                    'direction': self.direction}
+
         return results
 
 
@@ -363,6 +365,9 @@ class TranscriptMapper():
         :rtype: list
         """
         inputTranscripts = []
+        if not os.path.exists(inputFile):
+            raise FileNotFoundError("{} not found".format(inputFile))
+
         logger.info("Reading Transcript Information from {}".format(inputFile))
         with open(inputFile, 'r') as f:
             for line in f:
@@ -387,6 +392,9 @@ class TranscriptMapper():
         :return: list of dictionaries containing query information
         :rtype: list
         """
+        if not os.path.exists(inputFile):
+            raise FileNotFoundError("{} not found".format(inputFile))
+
         inputQuery = []
         logger.info("Reading Query Information from {}".format(inputFile))
         with open(inputFile, 'r') as f:
