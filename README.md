@@ -181,7 +181,11 @@ To easily distinguish insertion bases, which do not have a direct mapping to the
 
 ## Testing
 
-- Unit tests covering the functionality of the implementation can be found under `/tests/` and can be executed with the following command: 
+- Unit tests covering the functionality of the implementation can be found in `./tests/test_transcript_utils.py`.
+
+- Both the functionality and error reporting are covered in the unit tests.
+
+- All tests can can be executed with the following command: 
 
 ```
 pytest tests
