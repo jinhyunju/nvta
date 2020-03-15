@@ -6,6 +6,5 @@ setup(name="nvta",
       author="Jin Hyun Ju",
       author_email="jinhyun.ju@gmail.com",
       packages= ['nvta'],
-      install_requires=["intervaltree"],
-      extras_require={'test': ['pytest']},
+      install_requires=["intervaltree", "pytest"]
       )
