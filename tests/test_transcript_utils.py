@@ -54,12 +54,29 @@ def test_verify_cigar():
 
 def test_process_cigar():
 
-    testTranscript = create_mock_transcript(cigar = "8M7D6M2I2M11D7M")
+    testTranscriptPos = create_mock_transcript(cigar = "8M7D6M2I2M11D7M", 
+                                            startPos = 3,
+                                            direction = "+")
     
-    assert isinstance(testTranscript.conversionTree, IntervalTree)
+    assert isinstance(testTranscriptPos.conversionTree, IntervalTree)
 
-    assert testTranscript.conversionTree[0] == {Interval(0, 8, 3)}
+    assert testTranscriptPos.conversionTree == IntervalTree([Interval(0, 8, 3), 
+                                                             Interval(8, 14, 10), 
+                                                             Interval(14, 15, 9.1), 
+                                                             Interval(15, 16, 8.2), 
+                                                             Interval(16, 18, 8), 
+                                                             Interval(18, 25, 19)])
+    
+    testTranscriptNeg = create_mock_transcript(cigar = "8M7D6M2I2M11D7M", 
+                                               startPos = 43,
+                                               direction = "-")
 
+    assert testTranscriptNeg.conversionTree == IntervalTree([Interval(0, 7, 43), 
+                                                          Interval(7, 9, 32), 
+                                                          Interval(9, 10, 33.1), 
+                                                          Interval(10, 11, 34.2), 
+                                                          Interval(11, 17, 34), 
+                                                          Interval(17, 25, 27)])
 
 def test_translate_coordinates_pos_strand():
     

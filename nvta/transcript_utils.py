@@ -12,7 +12,8 @@ class Transcript():
     - Process a CIGAR string from a single transcript
     - Generate an Intervaltree to transform coordinates
     - Transform coordinates to the reference based on input
-    
+    - Supporting both 5'-3' and 3'-5' mapping.
+
     """
     
     def __init__(self, name, chrom, startPos, cigar, direction = "+"):
@@ -45,7 +46,7 @@ class Transcript():
         Accessor method to get the transcript information
 
         :return: A dictionary with the transcript 
-                  name, chromosome, start position, and CIGAR string
+                  name, chromosome, start position, CIGAR string, and direction
         :rtype: dict
         """
         transcriptInfo = {'name' : self.name, 
@@ -98,7 +99,7 @@ class Transcript():
         Process a CIGAR string and create IntervalTree for coordinate translation
         
         :return: IntervalTree containing intervals of the transcript coordinates 
-                  that can be translated to the reference coordinates by adding 
+                  that can be translated to the reference coordinates when adjusted by
                   the value saved for the interval
         :rtype: IntervalTree
         """
@@ -168,7 +169,8 @@ class Transcript():
         
         :param inputPosition: int specifying the transcript coordinate to be translated
         :return: dictionary containing the transcript name (name)
-                  input position (inputPos), chromosome (chrom), and translated ref position (refPos)
+                  input position (inputPos), chromosome (chrom), 
+                  translated ref position (refPos), and direction (direction).
         :rtype: dict
         """
         if inputPosition < 0:
@@ -196,6 +198,8 @@ class Transcript():
         else:
             adjustedCoordinate = inputPosition + posAdjustment
         
+        # this is not super clean, but was required to deal with 
+        # python's floating point arithmetic limitations
         if float(adjustedCoordinate).is_integer():
             refCoordinate = int(adjustedCoordinate)
         else :

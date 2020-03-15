@@ -8,6 +8,8 @@
 
 # Installation
 
+Using an envrionment that has `python3`, execute the following command to install the package.
+
 `pip install -e /<path>/<to>/<package>`
 
 # External Dependencies
@@ -88,8 +90,8 @@ For the same transcript that maps in the opposite direction the CIGAR string wil
 
 ```
 COORD       0    5    10   15   20     25   30   35   40   45   50
-GENOME:CHR1 ACTGTCATGTACGTTTAGCTAGCC--TAGCTAGGGACCTAGATAATTTAGCTAG
-TR1         3' GTCATGTA-------CTAGCCGGTA-----------AGATAAT 5'
+GENOME:CHR1 ACTGTCATGTACGTTTAGCTAGCC--TAGCTAGGGACCTAGATGTATTAGCTAG
+TR1         3' GTCATGTA-------CTAGCCGGTA-----------AGATGTA 5'
                |   |           |    |               |    |
                24  20          15   10              5    0
 ```
@@ -134,6 +136,8 @@ To easily distinguish insertion bases, that do not have a direct mapping to the 
 
 - The user is aware of the size of the reference and is responsible to check whether the supplied transcript and cigar is not going to generate out of bounds values for a given coordinate translation. 
 
+- CIGAR strings are always represented in the 5'-3' direction of the reference. 
+
 ## Strengths and Weaknesses
 
 - This solution supports the use cases described in the problem statement of reading in transcripts and queries from a file, and also provides the user the flexibility to create custom workflows by having an independent `Transcript` class. It also makes it easier to create a parallelized solution for dealing with a large number of unique transcripts.
@@ -152,3 +156,10 @@ To easily distinguish insertion bases, that do not have a direct mapping to the 
 ## Testing
 
 - Unit tests covering the functionality of the implementation can be found under `/tests/` and can be executed with the following command `pytest tests`.
+
+## Additional Thoughts
+
+- To produce real-world data using external data sources, one might download cDNA or CDS sequences from public sources such as Ensembl (using their FTP download features) and map them to a reference in house to generate the CIGAR strings. This would allow the user to not be tied to a specific version of the reference. 
+- For dealing with very long CIGAR strings, one could split the transcript between long streches of deletions (likely introns) to reduce the amount of data that is associated to a single transcript. 
+- To handle many many CIGAR strings, the data could be partitioned into chromosomes and sub regions within the chromosome, so that each subset is at a reasonable size. 
+- If one expects a large number of queries that are not unique, pre-computing the translation of coordinates and having a look up table might be more efficient (as mentioned in the implementation details). Having values pre-computed for the most frequently queried genes/transcripts only and doing the translation on the fly for other less frequently queried genes/transcripts could be a happy medium as well.
