@@ -47,24 +47,26 @@ transcriptMapper.import_queries(fileQueryInput)
 
 ```python
 # execute all queries
-transcriptMapper.run_all_queries(showResults = True)
+transcriptMapper.run_all_queries(showResults=True)
 
 # write results to file
-transcriptMapper.export_query_results(outputFile= outputFile)
+transcriptMapper.export_query_results(outputFile=outputFile)
 ```
 
-## Use single transcript with direct user input
+## Example usage of the `Transcript` class with direct user input
 
 ```python
 from nvta.transcript_utils import Transcript
 
+# construct a Transcript object
 singleTranscript = Transcript(name="TR1",
                               startPos=3,
                               chrom="CHR1",
-                              cigar="8M7D6M2I2M11D7M")
+                              cigar="8M7D6M2I2M11D7M",
+                              direction="+")
 
+# map a transcript coordinate to the reference
 singleTranscript.translate_coordinates(4)
-
 ```
 
 # Original Problem Statement
@@ -96,7 +98,7 @@ TR1         3' GTCATGTA-------CTAGCCGGTA-----------AGATGTA 5'
                24  20          15   10              5    0
 ```
 
-Here we would map the start of the transcript to CHR1:43. The ninth base would map to the first base of the insertion after CHR1:24, and will be represented as CHR1:24.1 whereas the tenth base will map to the second base of the insertion as CHR1:24.2. The end of the transcript 24 will map to CHR1:3.
+Here we would map the start of the transcript to CHR1:43. The ninth base would map to the first base of the insertion after CHR1:24, and will be represented as CHR1:24.1 whereas the tenth base will map to the second base of the insertion as CHR1:24.2. The end of the transcript, 24, will map to CHR1:3.
 
 
 # Implementation Details
@@ -111,9 +113,21 @@ Here we would map the start of the transcript to CHR1:43. The ninth base would m
 - The fourth column has the CIGAR string indicating the mapping of the transcript to the reference. (`string`)
 - The fifth column should have `+` for a 5'-3' direction and a `-` for a 3'-5' direction transcript. (`string`)
 
+Example :
+
+```
+TR1	CHR1	3	8M7D6M2I2M11D7M	+
+```
+
 `Query input`: A two column (tab-separated) file indicating a set of queries. 
 - The first column shows the name of the transcript. (`string`)
 - The second column shows the 0-based transcript coordinate that should be translated to a reference position. (`int`)
+
+Example:
+
+```
+TR1	4
+```
 
 ### Outputs
 
@@ -122,6 +136,12 @@ Here we would map the start of the transcript to CHR1:43. The ninth base would m
 - The third column shows the chromosome name (`string`)
 - The fourth column shows the reference base the query mapped to (`int` for regular, `float` for insertions)
 - The fifth column shows the direction of the transcript (`string`)
+
+Example:
+
+```
+TR1	4	CHR1	7	+
+```
 
 ### Additional detail for handling insertions 
 
