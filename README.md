@@ -2,15 +2,15 @@
 
 `nvta` is a python library for mapping transcript coordinates to the reference genome based on its CIGAR string.
 
-# TO DO 
-
-[] Identify public transcript resources 
-
 # Installation
 
 Using an environment that has `python3`, execute the following command to install the package.
 
 `pip install -e /<path>/<to>/<package>`
+
+If you extracted the contents of the tar ball you can point to the directory, or you can also use the tar ball directly.
+
+`pip install nvta-0.1.tar.gz`
 
 # External Dependencies
 
