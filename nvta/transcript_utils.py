@@ -15,7 +15,7 @@ class Transcript():
     
     """
     
-    def __init__(self, name, chrom, startPos, cigar, isReverse = False):
+    def __init__(self, name, chrom, startPos, cigar, direction = "+"):
         """
         Initiate transcript object with following inputs
         
@@ -23,13 +23,16 @@ class Transcript():
         :param chrom: string for transcript chromosome (ex. chr1, chr2)
         :param startPos: int specifying start position of transcript on reference
         :param cigar: string containing the CIGAR string of the transcript 
+        :param direction: string specifying the transcript direction.
+                          '+' for 5'-3' and '-' for 3'-5' directions.
+                          default is '+'
         :return: none
         :rtype: none
         """
         self.name = name
         self.chrom = chrom
         self.startPos = startPos
-        self.isReverse = isReverse
+        self.direction = direction
         # validate cigar
         self.cigar = self.verify_cigar(cigar)
         # create interval tree based on cigar
@@ -48,7 +51,8 @@ class Transcript():
         transcriptInfo = {'name' : self.name, 
                            'chrom' : self.chrom, 
                            'startPos' : self.startPos, 
-                           'cigar' : self.cigar}
+                           'cigar' : self.cigar,
+                           'direction' : self.direction}
         return transcriptInfo
 
     @staticmethod
@@ -102,13 +106,17 @@ class Transcript():
 
         refTransform = self.startPos
         cigar = self.cigar
-        isReverse = self.isReverse
+        direction = self.direction
         
         tStart = 0
         tEnd = 0
         conversionTree = IntervalTree()
         matches = re.findall(r'([0-9]+)([MIDNX=]{1})', cigar)
-        
+
+        if direction == "-":
+            # if direction is 3'-5' reverse the cigar operation order
+            matches = reversed(matches)
+
         for cigarEntry in matches:
             logger.debug("Processing CIGAR entry {}".format(cigarEntry))
 
@@ -122,9 +130,11 @@ class Transcript():
 
             elif opChar in ['N','D']:
                 # increase adjustment to account for gaps
-                if isReverse:
+                if direction == "-":
+                    # if 3'-5' reduce correction factor
                     refTransform = refTransform - opInt
                 else:
+                    # if 5'-3' reduce correction factor
                     refTransform = refTransform + opInt
 
             elif opChar in ['I']:
@@ -132,9 +142,11 @@ class Transcript():
                 for i in range(0,opInt):
                     
                     tEnd = tStart + 1
-                    if isReverse:
+                    if direction == "-":
+                        #  if 3'-5' add insertion base back to correction
                         refTransform = refTransform + 1
                     else:
+                        # if 5'-3' subtract insertion base from correction
                         refTransform = refTransform - 1
                     conversionTree[tStart:tEnd] = float(str(refTransform)+"."+str(i + 1))
                     tStart = tEnd
@@ -149,7 +161,7 @@ class Transcript():
         logger.info("Finished Processing of Transcript CIGAR")
 
         return conversionTree
-    
+
     def translate_coordinates(self, inputPosition):
         """
         Translate a transcript position to the reference position
@@ -179,7 +191,7 @@ class Transcript():
         else:
             posAdjustment = intervalSet.pop().data
 
-        if self.isReverse:
+        if self.direction == "-":
             adjustedCoordinate = posAdjustment - inputPosition
         else:
             adjustedCoordinate = inputPosition + posAdjustment
@@ -187,12 +199,13 @@ class Transcript():
         if float(adjustedCoordinate).is_integer():
             refCoordinate = int(adjustedCoordinate)
         else :
-            refCoordinate = format(adjustedCoordinate, '.1f')
+            refCoordinate = float(format(adjustedCoordinate, '.1f'))
 
         results = {'name' : self.name, 
                    'inputPos' : inputPosition, 
                    'chrom' : self.chrom, 
-                   'refPos' : adjustedCoordinate}
+                   'refPos' : refCoordinate,
+                   'direction': self.direction}
         return results
 
 class TranscriptMapper():
@@ -215,10 +228,12 @@ class TranscriptMapper():
         """
         Accessor for query info
 
+        :param index: int specifying the 0-based index of a single query
         :return: list of dictionaries containing imported queries
         :rtype: list
         """
         if index is None:
+            # if no index is supplied return all queries
             return self.queries
         else:
             if index >= 0 & index < len(self.queries):
@@ -230,10 +245,12 @@ class TranscriptMapper():
         """
         Accessor for transcripts
 
+        :param name: string specifying a transcript name to retrieve
         :return: dictionary of imported transcripts
         :rtype: dict
         """
         if name is None:
+            # if no name is supplied return all transcripts
             return self.transcripts
         else:
             if name in self.transcripts:
@@ -313,7 +330,7 @@ class TranscriptMapper():
         # check if file exists
         with open(outputFile, 'w') as f:
             for item in self.queryResults:
-                f.write("{name}\t{inputPos}\t{chrom}\t{refPos}\n".format(**item))
+                f.write("{name}\t{inputPos}\t{chrom}\t{refPos}\t{direction}\n".format(**item))
 
     @staticmethod
     def get_transcript_info_from_file(inputFile):
@@ -331,11 +348,12 @@ class TranscriptMapper():
                 # check if 4 tab separated entries are present
                 # and whether the 3rd entry can be converted to int
                 lineSplit = TranscriptMapper.check_transcript_line(line)
-                
+
                 transcriptInfo = {'name' : lineSplit[0], 
                                   'chrom' : lineSplit[1],
                                   'startPos' : int(lineSplit[2]),
-                                  'cigar' : lineSplit[3]}
+                                  'cigar' : lineSplit[3],
+                                  'direction' : lineSplit[4]}
                 inputTranscripts.append(transcriptInfo)
         return inputTranscripts
     
@@ -368,13 +386,16 @@ class TranscriptMapper():
         """
         lineSplit = line.strip().split("\t")
         
-        if len(lineSplit) != 4:
-            raise Exception("Input file must have 4 tab separated entries.")
+        if len(lineSplit) != 5:
+            raise Exception("Input file must have 5 tab separated entries.")
         
         try:
             int(lineSplit[2])
         except:
             raise Exception("Third column needs to be an integer")
+
+        if lineSplit[4] not in ["+", "-"]:
+            raise Exception("Fifth column needs to be '+' or '-' indicating the direction of the transcript")
 
         return lineSplit
 

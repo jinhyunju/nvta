@@ -4,9 +4,10 @@
 
 # To Do
 
-- Need to add strand to input
-- Need to add test for reverse
-- Need to add strand to output
+[v] Need to add strand to input
+[v] Need to add test for reverse
+[v] Need to add strand to output
+[] Need to update readme with direction
 
 # Installation
 
