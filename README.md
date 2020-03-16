@@ -19,6 +19,12 @@ This package uses the following dependencies:
 - `intervaltree`
 - `pytest`
 
+# Tutorial
+
+For a detailed tutorial of the features, please use this jupyter notebook.
+
+`transcript_utils_tutorial.ipynb`
+
 # Quick start example
 
 ## Processing multiple transcripts and queries from files

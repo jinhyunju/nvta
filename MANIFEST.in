@@ -1,3 +1,4 @@
 include tests/test_transcript_utils.py
 include tests/resources/example_query.tsv
 include tests/resources/example_transcript_input.tsv
+include tutorial/transcript_utils_tutorial.ipynb

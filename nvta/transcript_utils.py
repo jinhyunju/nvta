@@ -60,11 +60,15 @@ class Transcript():
         return transcriptInfo
 
     @staticmethod
-    def verify_cigar(cigar):
+    def verify_cigar(cigar, ignoreHSP=False):
         """
         Method to verify a given CIGAR string
+        (information based on https://samtools.github.io/hts-specs/SAMv1.pdf)
 
         :param cigar: string containing the CIGAR string of the transcript
+        :param ignoreHSP: bool setting to ignore H,S,P operations or not.
+                          Turn on when verifying CIGAR strings that are not
+                          going to be used for coordinate mapping.
         :return: Input cigar string if it passed all checks
         :rtype: string
         """
@@ -81,20 +85,21 @@ class Transcript():
 
             if opChar not in validCigarChar:
                 # constant adjustment
-                logger.error("""Invalid CIGAR string character
-                                detected {}""".format(opChar))
+                logger.error(("Invalid CIGAR string character detected "
+                              "{}".format(opChar)))
                 raise ValueError("Invalid CIGAR string character")
 
-            # need to check if H and S
             if opChar in ['H', 'S', 'P']:
-                logger.error("""CIGAR parser does not support
-                                logic for {}""".format(opChar))
-                raise ValueError("Unsupported CIGAR character")
+                if not ignoreHSP:
+                    logger.error(("CIGAR parser does not support logic "
+                                  "for {}".format(opChar)))
+                    raise ValueError("Unsupported CIGAR character")
+
             reconstruct += cigarEntry[0] + cigarEntry[1]
 
         if len(reconstruct) != len(cigar):
-            logger.error("""Parsed information does not match original CIGAR,
-                            potentially malformatted CIGAR string.""")
+            logger.error(("Parsed information does not match original CIGAR, "
+                          "potentially malformatted CIGAR string."""))
             logger.error("Input CIGAR = {}".format(cigar))
             logger.error("Parsed CIGAR = {}".format(reconstruct))
             raise ValueError("Malformatted CIGAR string")
@@ -165,8 +170,8 @@ class Transcript():
 
             else:
                 # catch unknown if it wasn't caught in CIGAR validation
-                logger.error("""Encountered invalid character
-                                in CIGAR {}""".format(opChar))
+                logger.error(("Encountered invalid character in CIGAR "
+                              "{}".format(opChar)))
                 raise ValueError("Unknown CIGAR operation {}".format(opChar))
             # advance to next transcript interval
             tStart = tEnd
@@ -278,6 +283,23 @@ class TranscriptMapper():
             else:
                 raise Exception("Transcript not found.")
 
+    def get_query_results(self, index=None):
+        """
+        Accessor for query results
+
+        :param index: int specifying the 0-based index of a query result
+        :return: list of dictionaries containing imported queries
+        :rtype: list
+        """
+        if index is None:
+            # if no index is supplied return all queries
+            return self.queryResults
+        else:
+            if index >= 0 & index < len(self.queryResults):
+                return self.queryResults[index]
+            else:
+                raise Exception("Query result index out of bounds")
+
     def _build_transcripts(self, inputFile):
         """
         Internal wrapper for retrieving transcript information.
@@ -311,7 +333,7 @@ class TranscriptMapper():
         """
         self.queries = self.get_query_from_file(inputFile)
 
-    def run_all_queries(self, showResults=False):
+    def run_all_queries(self):
         """
         Method to run all queries imported to object.
 
@@ -321,8 +343,6 @@ class TranscriptMapper():
         """
         results = [self.run_single_query(**x) for x in self.queries]
         self.queryResults = results
-        if showResults:
-            return results
 
     def run_single_query(self, name, queryPos):
         """
@@ -336,8 +356,8 @@ class TranscriptMapper():
         try:
             result = self.transcripts[name].translate_coordinates(queryPos)
         except KeyError:
-            logger.error("""Input query contains a transcript
-                            that has not been loaded""")
+            logger.error(("Input query contains a transcript "
+                          "that has not been loaded"))
             raise ValueError
         return result
 
@@ -349,11 +369,13 @@ class TranscriptMapper():
                            (path to output file must exist)
         :return: none
         """
-        # check if file exists
-        with open(outputFile, 'w') as f:
-            for item in self.queryResults:
-                f.write("""{name}\t{inputPos}\t{chrom}\t
-                           {refPos}\t{direction}\n""".format(**item))
+        try:
+            with open(outputFile, 'w') as f:
+                for item in self.queryResults:
+                    f.write("""{name}\t{inputPos}\t{chrom}\t
+                               {refPos}\t{direction}\n""".format(**item))
+        except IOError:
+            raise Exception("Cannot access outputfile.")
 
     @staticmethod
     def get_transcript_info_from_file(inputFile):
@@ -371,8 +393,7 @@ class TranscriptMapper():
         logger.info("Reading Transcript Information from {}".format(inputFile))
         with open(inputFile, 'r') as f:
             for line in f:
-                # check if 4 tab separated entries are present
-                # and whether the 3rd entry can be converted to int
+                # checking validity of line
                 lineSplit = TranscriptMapper.check_transcript_line(line)
 
                 transcriptInfo = {'name': lineSplit[0],
@@ -424,8 +445,8 @@ class TranscriptMapper():
             raise Exception("Third column needs to be an integer")
 
         if lineSplit[4] not in ["+", "-"]:
-            raise Exception("""Fifth column needs to be '+' or '-'
-                               indicating the direction of the transcript""")
+            raise Exception(("Fifth column needs to be '+' or '-' "
+                             "indicating the direction of the transcript"))
 
         return lineSplit
 
