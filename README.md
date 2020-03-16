@@ -200,6 +200,9 @@ pytest tests
 ## Additional Thoughts
 
 - To produce real-world data using external data sources, one might download cDNA sequences from public sources such as Ensembl (using their FTP download features) and map them to a reference in house to generate the CIGAR strings. This would allow the user to not be tied to a specific version of the reference. 
+
 - For dealing with very long CIGAR strings, one could split the transcript between long stretches of deletions (likely introns) to reduce the amount of data that is associated to a single transcript. 
+
 - To handle a large number of CIGAR strings, the data could be partitioned into chromosomes and sub regions within the chromosome, so that each subset is at a reasonable size. 
+
 - If one expects a large number of queries that are not unique, pre-computing the translation of coordinates and having a look up table might be more efficient (as mentioned in the strengths/weaknesses section). One could also save the result of a specific query to a look up table once it has been executed and directly look it up from the table when it is queried again. Having values pre-computed for the most frequently queried genes/transcripts only and doing the translation on the fly for other less frequently queried genes/transcripts could be a happy medium as well.
