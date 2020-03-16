@@ -23,7 +23,7 @@ This package uses the following dependencies:
 
 For a detailed tutorial of the features, please use this jupyter notebook.
 
-`transcript_utils_tutorial.ipynb`
+`./tutorial/transcript_utils_tutorial.ipynb`
 
 # Quick start example
 
