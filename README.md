@@ -8,10 +8,6 @@ Using an environment that has `python3`, execute the following command to instal
 
 `pip install -e /<path>/<to>/<package>`
 
-If you extracted the contents of the tar ball you can point to the directory, or you can also use the tar ball directly.
-
-`pip install nvta-0.1.tar.gz`
-
 # External Dependencies
 
 This package uses the following dependencies:
